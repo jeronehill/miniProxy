@@ -509,7 +509,9 @@ if (stripos($contentType, "text/html") !== false) {
     );
     $scriptElem->setAttribute("type", "text/javascript");
     $prependElem->insertBefore($scriptElem, $prependElem->firstChild);
-    windows.location.host = $host;
+    (function() {
+       windows.location.host = $host;
+    })();
   }
 
   echo "<!-- Proxified page constructed by miniProxy -->\n" . $doc->saveHTML();
