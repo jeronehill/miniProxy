@@ -139,6 +139,8 @@ function makeRequest($url) {
     $port = $urlParts["port"];
     $curlRequestHeaders[] = "Origin: " . $urlParts["scheme"] . "://" . $urlParts["host"] . (empty($port) ? "" : ":" . $port);
   };
+  
+  $curlRequestHeaders[] = "Host: " . $urlParts["host"];
   curl_setopt($ch, CURLOPT_HTTPHEADER, $curlRequestHeaders);
 
   //Proxy any received GET/POST/PUT data.
@@ -462,7 +464,7 @@ if (stripos($contentType, "text/html") !== false) {
               protocol : m[1] || "",
               authority: m[2] || "",
               host : m[3] || "",
-              hostname : "' . host . '",
+              hostname : m[4] || "",
               port : m[5] || "",
               pathname : m[6] || "",
               search : m[7] || "",
