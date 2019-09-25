@@ -462,7 +462,7 @@ if (stripos($contentType, "text/html") !== false) {
               protocol : m[1] || "",
               authority: m[2] || "",
               host : m[3] || "",
-              hostname : m[4] || "",
+              hostname : "' . host . '",
               port : m[5] || "",
               pathname : m[6] || "",
               search : m[7] || "",
@@ -509,9 +509,6 @@ if (stripos($contentType, "text/html") !== false) {
     );
     $scriptElem->setAttribute("type", "text/javascript");
     $prependElem->insertBefore($scriptElem, $prependElem->firstChild);
-    (function() {
-       windows.location.host = $host;
-    })();
   }
 
   echo "<!-- Proxified page constructed by miniProxy -->\n" . $doc->saveHTML();
