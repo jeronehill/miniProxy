@@ -432,7 +432,84 @@ if (stripos($contentType, "text/html") !== false) {
     }
   }
 
-  // Ajax request will not use proxy
+  //Attempt to force AJAX requests to be made through the proxy by
+  //wrapping window.XMLHttpRequest.prototype.open in order to make
+  //all request URLs absolute and point back to the proxy.
+  //The rel2abs() JavaScript function serves the same purpose as the server-side one in this file,
+  //but is used in the browser to ensure all AJAX request URLs are absolute and not relative.
+  //Uses code from these sources:
+  //http://stackoverflow.com/questions/7775767/javascript-overriding-xmlhttprequest-open
+  //https://gist.github.com/1088850
+  //TODO: This is obviously only useful for browsers that use XMLHttpRequest but
+  //it's better than nothing.
+  $head = $xpath->query("//head")->item(0);
+  $body = $xpath->query("//body")->item(0);
+  $prependElem = $head != null ? $head : $body;
+  //Only bother trying to apply this hack if the DOM has a <head> or <body> element;
+  //insert some JavaScript at the top of whichever is available first.
+  //Protects against cases where the server sends a Content-Type of "text/html" when
+  //what's coming back is most likely not actually HTML.
+  //TODO: Do this check before attempting to do any sort of DOM parsing?
+  if ($prependElem != null) {
+    $scriptElem = $doc->createElement("script",
+      '(function() {
+        if (window.XMLHttpRequest) {
+          function parseURI(url) {
+            var m = String(url).replace(/^\s+|\s+$/g, "").match(/^([^:\/?#]+:)?(\/\/(?:[^:@]*(?::[^:@]*)?@)?(([^:\/?#]*)(?::(\d*))?))?([^?#]*)(\?[^#]*)?(#[\s\S]*)?/);
+            // authority = "//" + user + ":" + pass "@" + hostname + ":" port
+            return (m ? {
+              href : m[0] || "",
+              protocol : m[1] || "",
+              authority: m[2] || "",
+              host : m[3] || "",
+              hostname : m[4] || "",
+              port : m[5] || "",
+              pathname : m[6] || "",
+              search : m[7] || "",
+              hash : m[8] || ""
+            } : null);
+          }
+          function rel2abs(base, href) { // RFC 3986
+            function removeDotSegments(input) {
+              var output = [];
+              input.replace(/^(\.\.?(\/|$))+/, "")
+                .replace(/\/(\.(\/|$))+/g, "/")
+                .replace(/\/\.\.$/, "/../")
+                .replace(/\/?[^\/]*/g, function (p) {
+                  if (p === "/..") {
+                    output.pop();
+                  } else {
+                    output.push(p);
+                  }
+                });
+              return output.join("").replace(/^\//, input.charAt(0) === "/" ? "/" : "");
+            }
+            href = parseURI(href || "");
+            base = parseURI(base || "");
+            return !href || !base ? null : (href.protocol || base.protocol) +
+            (href.protocol || href.authority ? href.authority : base.authority) +
+            removeDotSegments(href.protocol || href.authority || href.pathname.charAt(0) === "/" ? href.pathname : (href.pathname ? ((base.authority && !base.pathname ? "/" : "") + base.pathname.slice(0, base.pathname.lastIndexOf("/") + 1) + href.pathname) : base.pathname)) +
+            (href.protocol || href.authority || href.pathname ? href.search : (href.search || base.search)) +
+            href.hash;
+          }
+          var proxied = window.XMLHttpRequest.prototype.open;
+          window.XMLHttpRequest.prototype.open = function() {
+              if (arguments[1] !== null && arguments[1] !== undefined) {
+                var url = arguments[1];
+                url = rel2abs("' . $url . '", url);
+                if (url.indexOf("' . PROXY_PREFIX . '") == -1) {
+                  url = "' . PROXY_PREFIX . '" + url;
+                }
+                arguments[1] = url;
+              }
+              return proxied.apply(this, [].slice.call(arguments));
+          };
+        }
+      })();'
+    );
+    $scriptElem->setAttribute("type", "text/javascript");
+    $prependElem->insertBefore($scriptElem, $prependElem->firstChild);
+  }
 
   echo "<!-- Proxified page constructed by miniProxy -->\n" . $doc->saveHTML();
 } else if (stripos($contentType, "text/css") !== false) { //This is CSS, so proxify url() references.
