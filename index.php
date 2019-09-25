@@ -140,7 +140,11 @@ function makeRequest($url) {
     $curlRequestHeaders[] = "Origin: " . $urlParts["scheme"] . "://" . $urlParts["host"] . (empty($port) ? "" : ":" . $port);
   };
   
-  $curlRequestHeaders[] = "Host: " . $urlParts["host"];
+  if (in_array("host", $removedHeaders)) {
+    $urlParts = parse_url($url);
+    $curlRequestHeaders[] = "Host: " . $urlParts["host"];
+  };
+ 
   curl_setopt($ch, CURLOPT_HTTPHEADER, $curlRequestHeaders);
 
   //Proxy any received GET/POST/PUT data.
