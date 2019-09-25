@@ -91,8 +91,7 @@ if (!function_exists("getallheaders")) {
 $usingDefaultPort =  (!isset($_SERVER["HTTPS"]) && $_SERVER["SERVER_PORT"] === 80) || (isset($_SERVER["HTTPS"]) && $_SERVER["SERVER_PORT"] === 443);
 $prefixPort = $usingDefaultPort ? "" : ":" . $_SERVER["SERVER_PORT"];
 //Use HTTP_HOST to support client-configured DNS (instead of SERVER_NAME), but remove the port if one is present
-$prefixHost = $_SERVER["HTTP_HOST"];
-$prefixHost = strpos($prefixHost, ":") ? implode(":", explode(":", $_SERVER["HTTP_HOST"], -1)) : $prefixHost;
+$prefixHost = $_SERVER["SERVER_NAME"];
 
 // https only
 define("PROXY_PREFIX", "https" . "://" . $prefixHost . $prefixPort . $_SERVER["SCRIPT_NAME"] . "?");
